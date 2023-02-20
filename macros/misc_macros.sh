@@ -19,3 +19,16 @@ function update-chromecast() {
 	done
 	echo "Done updating chromecasts."
 }
+
+# Don't fill your shell history with passwords!
+function read-passwd() {
+	VAR_NAME=$1
+	read -sp "Enter password: " PASSWORD
+	export "${VAR_NAME}=${PASSWORD}"
+	echo
+}
+
+# Check which process is listening to a specific port:
+port() {
+	sudo lsof -nP -iTCP:$1 | grep LISTEN
+}
