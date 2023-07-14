@@ -4,10 +4,20 @@ alias kube-tools-download='curl -L --remote-name-all https://storage.googleapis.
 
 alias kubeconfig='export KUBECONFIG=$(ls -1 ~/.kube/kubeconfig.* | sort | fzf)'
 
-install-kubectl() {
-  curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/arm64/kubectl"
-  sudo mv kubectl /usr/local/bin/kubectl
-  sudo chmod +x /usr/local/bin/kubectl
+install_kubectl() {
+	curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" -o /tmp/kubectl
+	check_error $? "Error downloading kubectl."
+	curl -LO "https://dl.k8s.io/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256" -o /tmp/kubectl.sha256
+	check_error $? "Error downloading checksum file."
+	echo "$(</tmp/kubectl.sha256)  /tmp/kubectl" | sha256sum --check
+	check_error $? "Checksum error."
+	sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+	check_error $? "Installation error."
+	kubectl version
+	if [ $? -eq 0 ]; then
+		echo "Installation successful."
+		rm /tmp/kubectl /tmp/kubectl.sha256
+	fi
 }
 
 install-krew() {
@@ -45,6 +55,17 @@ for TOOL in ${K8S_TOOLS}; do
 done
 
 if command -v kubectl &> /dev/null; then
-    alias k='kubectl'
+		eval $(kubectl completion bash)
+		alias k='kubectl'
     complete -F __start_kubectl k
 fi
+
+check_error() {
+	err=$1
+	msg=$2
+	if [ $? -ne 0 ]; then
+		echo "$msg"
+		return 1
+	fi
+	return 0
+}
